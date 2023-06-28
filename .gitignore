@@ -12,12 +12,13 @@
 
 !*.R
 !*.Rmd
+!*.md
 !*.csv
 !*.png
 !*.org
 
 !README.md
-!COPYING
+!LICENSE
 
 # !Makefile
 
