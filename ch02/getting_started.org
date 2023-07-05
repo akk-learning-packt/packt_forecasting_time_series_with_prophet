@@ -1,0 +1,126 @@
+#+TITLE: Getting started with Prophet
+
+* Building a simple model in Prophet
+
+The longest record of direct measurements of *Carbon Dioxide (CO_{2})* in the atmosphere was started in March 1958 by Charles David Keeling, using *National Oceanic and Atmospheric Administration (NOAA)* facility located 2 miles above sea level on the northern slope of /Mauna Loa/, a volcano on the island of Hawaii. At that elevation, Keeling's measurements would be unaffected by local releases of CO_{2}, such as from nearby factories.
+
+In 1961, Keeling published the data he had collected thus far, establishing that there was strong seasonal variation in CO_{2} levels and that they were rising steadily, a trend that later became known as the *Keeling Curve*.
+
+By May 1974, the NOAA had begun their own parallel measurements and have continued since then.
+
+With its seasonality and increasing trend, this curve is a good candidate to try out with Prophet. This datasets contains over 19000 daily observations across 53 years. The unit of measurement for CO_{2} is *Parts Per Million (PPM)*, a measure of CO_{2} molecules per million molecules of air.
+
+To begin our model, importing the necessary libraries
+
+#+begin_src python :session *py-session :results output :exports both :tangle getting_started.py
+import pandas as pd
+import matplotlib.pyplot as plt
+from prophet import Prophet
+#+end_src
+
+#+RESULTS:
+
+Bringing the data into play...
+
+#+begin_src python :session *py-session :results output :exports both :tangle getting_started.py
+df = pd.read_csv("../data/co2-ppm-daily_csv.csv")
+df['date'] = pd.to_datetime(df['date'])
+df.columns = ['ds', 'y']
+print(df.head())
+#+end_src
+
+#+RESULTS:
+:           ds       y
+: 0 1958-03-30  316.16
+: 1 1958-03-31  316.40
+: 2 1958-04-02  317.67
+: 3 1958-04-03  317.76
+: 4 1958-04-04  317.09
+
+Plotting the data
+
+#+begin_src python :session *py-session :results output file :exports both :tangle getting_started.py
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.scatter(pd.to_datetime(df['ds']), df['y'], s=1, c='#0072B2')
+ax.set(xlabel="Date", ylabel=r'CO$_2$ Fraction in Dry Air')
+fig.savefig("img/co2.png")
+print("img/co2.png")
+#+end_src
+
+#+RESULTS:
+[[file:img/co2.png]]
+
+fitting the model
+
+#+begin_src python :session *py-session :results output :exports both :tangle getting_started.py
+model = Prophet()
+model.fit(df)
+#+end_src
+
+#+RESULTS:
+: 12:10:43 - cmdstanpy - INFO - Chain [1] start processing
+: 12:11:05 - cmdstanpy - INFO - Chain [1] done processing
+
+In that single ~fit~ command, Prophet analyzed the data and isolated both the seasonality and trend without requiring us to specify any additional parameters.
+
+To make future forecast, we need to provide future dates to model...
+
+#+begin_src python :session *py-session :results output file :exports both :tangle getting_started.py
+future = model.make_future_dataframe(periods=365 * 10)
+forecast = model.predict(future)
+
+# Plotting
+fig = model.plot(forecast, xlabel='Date', ylabel=r'CO$_2$ PPM')
+plt.title('Daily Carbon Dioxide levels measured at Mauna Lua')
+fig.savefig("img/co2_pred.png")
+print("img/co2_pred.png")
+#+end_src
+
+#+RESULTS:
+[[file:img/co2_pred.png]]
+
+* Interpreting the forecast Dataframe
+
+take a look at that ~forecst~ DataFrame by displaying the first three rows and learn how these values were used in the preceding chart:
+
+#+begin_src python :session *py-session :results output :exports both :tangle getting_started.py
+print(forecast.head(3).T)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                                              0                    1                    2
+ds                          1958-03-30 00:00:00  1958-03-31 00:00:00  1958-04-02 00:00:00
+trend                                314.868082           314.870513           314.875375
+yhat_lower                           316.042491           315.982365           316.078342
+yhat_upper                           317.753704           317.639529           317.820602
+trend_lower                          314.868082           314.870513           314.875375
+trend_upper                          314.868082           314.870513           314.875375
+additive_terms                         1.985516               2.0158             2.118673
+additive_terms_lower                   1.985516               2.0158             2.118673
+additive_terms_upper                   1.985516               2.0158             2.118673
+weekly                                 0.003237            -0.010523             0.003448
+weekly_lower                           0.003237            -0.010523             0.003448
+weekly_upper                           0.003237            -0.010523             0.003448
+yearly                                 1.982279             2.026323             2.115225
+yearly_lower                           1.982279             2.026323             2.115225
+yearly_upper                           1.982279             2.026323             2.115225
+multiplicative_terms                        0.0                  0.0                  0.0
+multiplicative_terms_lower                  0.0                  0.0                  0.0
+multiplicative_terms_upper                  0.0                  0.0                  0.0
+yhat                                 316.853598           316.886313           316.994048
+#+end_example
+
+* Understanding components plots
+Prophet is an additive regression model. The prophet algorithm essentially does this in reverse; it takes a complex curve and decomposes it into its constituent parts. Prophet provides a ~plot_components~ method to visualize these.
+
+#+begin_src python :session *py-session :results output file :exports both :tangle getting_started.py
+fig2 = model.plot_components(forecast)
+fig2.savefig("img/components.png")
+print("img/components.png")
+#+end_src
+
+#+RESULTS:
+[[file:img/components.png]]
+
+The *trend* constantly increases but seems to have a steepening slope as time progresses - an acceleration of CO_{2} concentration in the atmosphere. The trend line also shows slim uncertainty intervals in the forecasted year. We expect about 430 PPM by 2030. However these exact numbers will vary depending upon the day of the week and the time of year due to the existence of the seasonality effects.

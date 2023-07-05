@@ -10,8 +10,8 @@
 # But not these files...
 !/.gitignore
 
-!*.R
-!*.Rmd
+!*.py
+!*.ipynb
 !*.md
 !*.csv
 !*.png
@@ -24,5 +24,3 @@
 
 # ...even if they are in subdirectories
 !*/
-
-.Rproj.user
